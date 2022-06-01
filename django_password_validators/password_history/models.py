@@ -50,18 +50,19 @@ class UserPasswordHistoryConfig(models.Model):
         hasher = get_password_hasher()()
         return hasher.encode(password, self.salt, self.iterations)
 
-    def _gen_password_history_salt(self):
+    def _gen_password_history_salt(self, hasher):
         salt_max_length = self._meta.get_field('salt').max_length
-        self.salt = get_random_string(length=salt_max_length)
+        self.salt = hasher.salt()[:salt_max_length]
 
     def save(self, *args, **kwargs):
         # When there is no salt as defined for a given user,
         # then we create the salt.
+        Hasher = get_password_hasher()
         if not self.salt:
-            self._gen_password_history_salt()
+            self._gen_password_history_salt(Hasher())
         # We take iterations from the default Hasher
         if not self.iterations:
-            self.iterations = get_password_hasher().iterations
+            self.iterations = Hasher.iterations
         return super(UserPasswordHistoryConfig, self).save(*args, **kwargs)
 
     def __str__(self):
